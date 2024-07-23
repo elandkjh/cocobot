@@ -7,7 +7,7 @@ import requests
 from io import BytesIO
 
 # OpenAI API 키 설정
-openai.api_key = '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'
+openai.api_key = 'key'
 
 # CLIP 모델 로드
 device = "cuda" if torch.cuda.is_available() else "cpu"
