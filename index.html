@@ -15,64 +15,80 @@
             font-family: Arial, sans-serif;
         }
         .chat-container {
-            width: 500px;
-            height: 600px;
+            width: 375px;
+            height: 812px;
             background-color: white;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            position: relative;
         }
         .chat-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 15px;
-            background-color: #007bff;
-            color: white;
+            height: 50px;
+            background-color: #FFEAB8;
             text-align: center;
             font-size: 18px;
+            position: relative;
+        }
+        .chat-header img {
+            height: 40px;
+        }
+        .chat-header .share-button {
+            position: absolute;
+            right: 15px;
+            cursor: pointer;
+            background-color: transparent;
+            border: none;
+        }
+        .chat-header .share-button img {
+            height: 30px;
         }
         .chat-messages {
             flex: 1;
             padding: 20px;
             overflow-y: auto;
             border-bottom: 1px solid #eee;
+            background: url('/static/bg_work.png') no-repeat center center;
+            background-size: contain;
+        }
+        @media (max-width: 600px) {
+            .chat-messages {
+                background-size: cover;
+            }
         }
         .chat-input {
             display: flex;
+            align-items: center;
             padding: 10px;
+            background-color: white;
+            border-top: 1px solid #eee;
         }
         .chat-input textarea {
             flex: 1;
             border: none;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 20px;
             resize: none;
-            height: 60px;
+            height: 40px;
+            background: url('/static/type.png') no-repeat center;
+            background-size: cover;
         }
         .chat-input button {
             margin-left: 10px;
-            padding: 10px 20px;
+            padding: 5px;
             border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
+            border-radius: 20px;
+            background: url('/static/button.png') no-repeat center;
+            background-size: 35px 35px;
+            width: 35px;
+            height: 35px;
             cursor: pointer;
-        }
-        .chat-input button:hover {
-            background-color: #0056b3;
-        }
-        .chat-input input[type="file"] {
-            display: none;
-        }
-        .chat-input label {
-            cursor: pointer;
-            margin-right: 10px;
-            display: flex;
-            align-items: center;
-        }
-        .chat-input label img {
-            width: 30px;
-            height: 30px;
         }
         .chat-message {
             display: flex;
@@ -94,14 +110,16 @@
             margin-left: 10px;
         }
         .chat-message.me .message-text {
-            background-color: #ffff99;
+            background-color: #FFFFFF;
+            border: 1px solid #D4C6A2;
             color: #000000;
         }
         .chat-message.bot {
             text-align: right;
         }
         .chat-message.bot .message-text {
-            background-color: #ff9999;
+            background-color: #FFEAB8;
+            border: 1px solid #D4C6A2;
             color: #000000;
         }
         .message-text {
@@ -120,18 +138,15 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            코코봇과 수다떨기
+            <img src="/static/logo.png" alt="Logo">
+            <button class="share-button" id="shareButton"><img src="/static/share.png" alt="Share"></button>
         </div>
         <div class="chat-messages" id="chatMessages">
             <!-- Chat messages will be appended here -->
         </div>
         <div class="chat-input">
-            <label for="imageInput">
-                <img src="/static/image-icon.png" alt="Attach Image">
-            </label>
-            <input type="file" id="imageInput" accept="image/*">
             <textarea id="messageInput" placeholder="Type your message here..."></textarea>
-            <button id="sendButton">보내기</button>
+            <button id="sendButton"></button>
         </div>
     </div>
 
@@ -139,7 +154,7 @@
         const messageInput = document.getElementById('messageInput');
         const chatMessages = document.getElementById('chatMessages');
         const sendButton = document.getElementById('sendButton');
-        const imageInput = document.getElementById('imageInput');
+        const shareButton = document.getElementById('shareButton');
 
         sendButton.addEventListener('click', sendMessage);
         messageInput.addEventListener('keypress', function (e) {
@@ -149,22 +164,17 @@
             }
         });
 
-        imageInput.addEventListener('change', function () {
-            const file = imageInput.files[0];
-            if (file) {
-                const formData = new FormData();
-                formData.append('image', file);
-                
-                fetch('/recognize', {
-                    method: 'POST',
-                    body: formData,
+        shareButton.addEventListener('click', () => {
+            if (navigator.share) {
+                navigator.share({
+                    title: 'CocoBot Chat',
+                    text: 'Check out this conversation with CocoBot!',
+                    url: window.location.href,
                 })
-                .then(response => response.json())
-                .then(data => {
-                    appendImage('me', data.imageUrl);
-                    appendMessage('bot', data.result);
-                })
-                .catch(error => console.error('Error:', error));
+                .then(() => console.log('Successful share'))
+                .catch((error) => console.log('Error sharing', error));
+            } else {
+                alert('Web Share API is not supported in your browser.');
             }
         });
 
@@ -196,21 +206,6 @@
             messageElement.innerHTML = `
                 <img src="${profileImage}" alt="User Avatar">
                 <div class="message-text">${message}</div>
-            `;
-            chatMessages.appendChild(messageElement);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        function appendImage(sender, imageUrl) {
-            const messageElement = document.createElement('div');
-            messageElement.classList.add('chat-message');
-            messageElement.classList.add(sender);
-            const profileImage = sender === 'me' ? '/static/profile(me).jfif' : '/static/profile(bot).png';
-            messageElement.innerHTML = `
-                <img src="${profileImage}" alt="User Avatar">
-                <div class="message-text">
-                    <img src="${imageUrl}" class="thumbnail" alt="Uploaded Image">
-                </div>
             `;
             chatMessages.appendChild(messageElement);
             chatMessages.scrollTop = chatMessages.scrollHeight;
