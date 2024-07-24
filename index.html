@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>cocobot(beta)</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f7f7f7;
+            font-family: Arial, sans-serif;
+        }
+        .chat-container {
+            width: 500px;
+            height: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .chat-header {
+            padding: 15px;
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            font-size: 18px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            border-bottom: 1px solid #eee;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+        }
+        .chat-input textarea {
+            flex: 1;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            resize: none;
+            height: 60px;
+        }
+        .chat-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+        .chat-input input[type="file"] {
+            display: none;
+        }
+        .chat-input label {
+            cursor: pointer;
+            margin-right: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .chat-input label img {
+            width: 30px;
+            height: 30px;
+        }
+        .chat-message {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+        .chat-message img {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+        .chat-message.me {
+            flex-direction: row-reverse;
+            text-align: left;
+        }
+        .chat-message.me img {
+            margin-right: 0;
+            margin-left: 10px;
+        }
+        .chat-message.me .message-text {
+            background-color: #ffff99;
+            color: #000000;
+        }
+        .chat-message.bot {
+            text-align: right;
+        }
+        .chat-message.bot .message-text {
+            background-color: #ff9999;
+            color: #000000;
+        }
+        .message-text {
+            border-radius: 5px;
+            padding: 10px;
+            display: inline-block;
+            max-width: 70%;
+        }
+        .thumbnail {
+            max-width: 100px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            코코봇과 수다떨기
+        </div>
+        <div class="chat-messages" id="chatMessages">
+            <!-- Chat messages will be appended here -->
+        </div>
+        <div class="chat-input">
+            <label for="imageInput">
+                <img src="/static/image-icon.png" alt="Attach Image">
+            </label>
+            <input type="file" id="imageInput" accept="image/*">
+            <textarea id="messageInput" placeholder="Type your message here..."></textarea>
+            <button id="sendButton">보내기</button>
+        </div>
+    </div>
+
+    <script>
+        const messageInput = document.getElementById('messageInput');
+        const chatMessages = document.getElementById('chatMessages');
+        const sendButton = document.getElementById('sendButton');
+        const imageInput = document.getElementById('imageInput');
+
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        imageInput.addEventListener('change', function () {
+            const file = imageInput.files[0];
+            if (file) {
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                fetch('/recognize', {
+                    method: 'POST',
+                    body: formData,
+                })
+                .then(response => response.json())
+                .then(data => {
+                    appendImage('me', data.imageUrl);
+                    appendMessage('bot', data.result);
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message) {
+                appendMessage('me', message);
+                messageInput.value = '';
+                fetch('/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ user_input: message }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    appendMessage('bot', data.response);
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+
+        function appendMessage(sender, message) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            messageElement.classList.add(sender);
+            const profileImage = sender === 'me' ? '/static/profile(me).jfif' : '/static/profile(bot).png';
+            messageElement.innerHTML = `
+                <img src="${profileImage}" alt="User Avatar">
+                <div class="message-text">${message}</div>
+            `;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function appendImage(sender, imageUrl) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('chat-message');
+            messageElement.classList.add(sender);
+            const profileImage = sender === 'me' ? '/static/profile(me).jfif' : '/static/profile(bot).png';
+            messageElement.innerHTML = `
+                <img src="${profileImage}" alt="User Avatar">
+                <div class="message-text">
+                    <img src="${imageUrl}" class="thumbnail" alt="Uploaded Image">
+                </div>
+            `;
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // 첫 진입 시 코코몽의 환영 메시지
+        window.addEventListener('load', function() {
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ user_input: '' }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                appendMessage('bot', data.response);
+            })
+            .catch(error => console.error('Error:', error));
+        });
+    </script>
+</body>
+</html>
